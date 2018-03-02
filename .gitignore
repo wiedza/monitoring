@@ -1,22 +1,44 @@
-# Compiled class file
+.checkstyle
+.classpath
+target
+.idea/
+*.iml
+*.iws
+!.idea/runConfigurations/
+.metadata
+.project
+.settings
+.directory
+.springBeans
+.DS_Store
+*.bak
 *.class
-
-# Log file
+*.iml
+*.launch
 *.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
+*.old
+*.orig
+*.prefs
+*.rej
+*.ser
+*~
 *.jar
 *.war
 *.ear
+*.bin
+*.exe
 *.zip
+*.7z
+*.tar
 *.tar.gz
-*.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
+*.tgz
+bin
+dummy.csv
+target
+node_modules
+bower_components
+dist-ts
+.idea
+.tern-project
+.npmignore
+tmp
