@@ -15,15 +15,21 @@
     <!-- ==================================================================== 
     = PROJECT
     ======================================================================-->
-    <artifactId>monitoring-api</artifactId>
+    <artifactId>monitoring-request-infos</artifactId>
 
     <!-- ==================================================================== 
     = DEPENDENCIES
     ======================================================================-->
     <dependencies>
+
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
+            <groupId>org.wiedza.monitoring</groupId>
+            <artifactId>monitoring-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
         </dependency>
 
         <dependency>

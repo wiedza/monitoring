@@ -23,7 +23,7 @@
     <!-- ==================================================================== 
     = PROJECT
     ====================================================================== -->
-    <groupId>org.wiedza.web</groupId>
+    <groupId>org.wiedza.monitoring</groupId>
     <artifactId>site</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
@@ -34,5 +34,27 @@
     <modules>
         <module>monitoring-api</module>
     </modules>
+
+    <!-- =====================================================================
+    = MODULES
+    ====================================================================== -->
+    <dependencyManagement>
+        <dependencies>
+        
+            <dependency>
+                <groupId>org.wiedza.monitoring</groupId>
+                <artifactId>monitoring-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>org.wiedza.monitoring</groupId>
+                <artifactId>monitoring-request-infos</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            
+        </dependencies>
+    </dependencyManagement>
+
 
 </project>
