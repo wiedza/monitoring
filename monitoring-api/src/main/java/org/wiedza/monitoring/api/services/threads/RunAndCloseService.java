@@ -8,7 +8,10 @@ package org.wiedza.monitoring.api.services.threads;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -23,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 
 import org.wiedza.monitoring.api.exceptions.Asserts;
+import org.wiedza.monitoring.api.loggers.Loggers;
 import org.wiedza.monitoring.api.time.Chrono;
 
 /**
@@ -39,6 +43,8 @@ public class RunAndCloseService<T> implements ThreadFactory {
     private final String                                threadsName;
 
     private final List<Callable<T>>                     tasks;
+
+    private final Map<Future<T>, Callable<T>>           tasksAndFutures;
 
     private final long                                  timeout;
 
@@ -59,6 +65,12 @@ public class RunAndCloseService<T> implements ThreadFactory {
     // =========================================================================
     @SafeVarargs
     public RunAndCloseService(final String threadsName, final long timeout, final int nbThreads,
+            final BiFunction<Exception, Callable<T>, T> onError, final Callable<T>... tasks) {
+        this(threadsName, timeout, nbThreads, Arrays.asList(tasks), onError);
+    }
+
+    @SafeVarargs
+    public RunAndCloseService(final String threadsName, final long timeout, final int nbThreads,
             final Callable<T>... tasks) {
         this(threadsName, timeout, nbThreads, Arrays.asList(tasks), null);
     }
@@ -77,7 +89,8 @@ public class RunAndCloseService<T> implements ThreadFactory {
         int howManyThreads = tasks.size() < nbThreads ? tasks.size() : nbThreads;
         this.threadsName = threadsName;
         this.timeout = timeout;
-        this.onError = onError;
+        this.onError = onError == null ? this::handlerError : onError;
+        tasksAndFutures = new HashMap<>();
         threadGroup = Thread.currentThread().getThreadGroup();
         executor = Executors.newFixedThreadPool(howManyThreads, this);
         completion = new ExecutorCompletionService<T>(executor);
@@ -94,18 +107,27 @@ public class RunAndCloseService<T> implements ThreadFactory {
 
         while (tasksLeft > 0 && chrono.snapshot().getDuration() < timeout) {
             timeLeft = computeTimeLeft(timeLeft, chrono);
+            Future<T> itemFuture = null;
+            T taskData = null;
             try {
-                Future<T> itemFuture = completion.poll(timeLeft, TimeUnit.MILLISECONDS);
+                itemFuture = completion.poll(timeLeft, TimeUnit.MILLISECONDS);
                 if (itemFuture != null) {
-                    T taskData = itemFuture.get();
-                    data.add(taskData);
+                    taskData = itemFuture.get();
                     tasksLeft = tasksLeft - 1;
                 }
             } catch (ExecutionException | InterruptedException error) {
+                Callable<T> task = resolveTask(itemFuture);
+                taskData = handlerError(error, task);
+                tasksLeft = tasksLeft - 1;
+            }
+
+            if (taskData != null) {
+                data.add(taskData);
             }
         }
+        executor.shutdown();
 
-        List<Runnable> tasksNotRunnings = executor.shutdownNow();
+        data.addAll(handlerTimeoutTask());
         return data;
     }
 
@@ -122,6 +144,7 @@ public class RunAndCloseService<T> implements ThreadFactory {
         for (Callable<T> task : tasks) {
             final Future<T> future = completion.submit(task);
             result.add(future);
+            tasksAndFutures.put(future, task);
         }
         return result;
     }
@@ -135,6 +158,32 @@ public class RunAndCloseService<T> implements ThreadFactory {
         final Thread result = new Thread(threadGroup, runnable, name, 0);
         result.setDaemon(false);
         return result;
+    }
+
+    // =========================================================================
+    // ERRORS
+    // =========================================================================
+    private T handlerError(Exception error, Callable<T> task) {
+        Loggers.DEBUGLOG.error(error.getMessage(), error);
+        return null;
+    }
+
+    private List<T> handlerTimeoutTask() {
+        List<T> result = new ArrayList<>();
+        for (Map.Entry<Future<T>, Callable<T>> entry : tasksAndFutures.entrySet()) {
+            if (!entry.getKey().isDone()) {
+                T taskData = onError.apply(new TimeoutException(), entry.getValue());
+                if (taskData != null) {
+                    result.add(taskData);
+                }
+            }
+        }
+        return result;
+    }
+
+    private Callable<T> resolveTask(Future<T> itemFuture) {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

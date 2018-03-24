@@ -11,6 +11,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.function.BiFunction;
 
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -71,13 +73,41 @@ public class RunAndCloseServiceTest {
         //@formatter:on
         chrono.stop();
         LOGGER.info("duration : {}", chrono.getDuration());
-        assertTrue(chrono.getDuration() > 2000L);
+        assertTrue(chrono.getDuration() >= 2000L);
         assertTrue(chrono.getDuration() < 2050L);
         data.forEach(m -> LOGGER.info("number : {}", m));
         assertListEquals(data, "1", "3");
     }
-    
-    
+
+    @Test
+    public void testWithTimeoutAndErrorHandler() {
+
+        BiFunction<Exception, Callable<String>, String> onError = (error, task) -> {
+            String result = "null";
+            if (task instanceof CallableTimeoutResult) {
+                result = ((CallableTimeoutResult<String>) task).getTimeoutResult();
+            }
+            return result;
+        };
+        //@formatter:off
+        Chrono chrono = Chrono.startChrono();
+        List<String> data = new RunAndCloseService<>("test",
+                                                      2000L,
+                                                      2, 
+                                                      onError,
+                                                      new SimpleTask(500,"1"),
+                                                      new SimpleTask(10000,"2"),
+                                                      new SimpleTask(1000,"3"),
+                                                      new SimpleTask(700,"4")
+                                                     ).run();
+        //@formatter:on
+        chrono.stop();
+        LOGGER.info("duration : {}", chrono.getDuration());
+        assertTrue(chrono.getDuration() > 2000L);
+        assertTrue(chrono.getDuration() < 2050L);
+        data.forEach(m -> LOGGER.info("number : {}", m));
+        assertListEquals(data, "1", "3", "timeout - 2", "timeout - 4");
+    }
 
     // =========================================================================
     // TOOLS

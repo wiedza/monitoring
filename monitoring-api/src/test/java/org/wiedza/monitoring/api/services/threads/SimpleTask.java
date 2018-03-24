@@ -6,15 +6,13 @@
  */
 package org.wiedza.monitoring.api.services.threads;
 
-import java.util.concurrent.Callable;
-
 /**
  * SimpleTask
  * 
  * @author patrickguillerm
  * @since 24 mars 2018
  */
-public class SimpleTask implements Callable<String> {
+public class SimpleTask implements CallableTimeoutResult<String> {
 
     // =========================================================================
     // ATTRIBUTES
@@ -39,6 +37,10 @@ public class SimpleTask implements Callable<String> {
     public String call() throws Exception {
         Thread.sleep(sleepTime);
         return result;
+    }
+
+    public String getTimeoutResult() {
+        return "timeout - " + result;
     }
 
 }
