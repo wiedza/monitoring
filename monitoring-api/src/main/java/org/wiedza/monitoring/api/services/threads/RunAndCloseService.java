@@ -92,13 +92,13 @@ public class RunAndCloseService<T> implements ThreadFactory {
         long timeLeft = timeout;
         final Chrono chrono = Chrono.startChrono();
 
-        while (tasksLeft > 0 && timeLeft > 0) {
+        while (tasksLeft > 0 && chrono.snapshot().getDuration() < timeout) {
+            timeLeft = computeTimeLeft(timeLeft, chrono);
             try {
                 Future<T> itemFuture = completion.poll(timeLeft, TimeUnit.MILLISECONDS);
                 if (itemFuture != null) {
                     T taskData = itemFuture.get();
                     data.add(taskData);
-                    timeLeft = computeTimeLeft(timeLeft, chrono);
                     tasksLeft = tasksLeft - 1;
                 }
             } catch (ExecutionException | InterruptedException error) {

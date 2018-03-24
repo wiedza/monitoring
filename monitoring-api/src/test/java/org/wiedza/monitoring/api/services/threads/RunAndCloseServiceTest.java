@@ -71,10 +71,13 @@ public class RunAndCloseServiceTest {
         //@formatter:on
         chrono.stop();
         LOGGER.info("duration : {}", chrono.getDuration());
-        assertTrue(chrono.getDuration() < 2000L);
+        assertTrue(chrono.getDuration() > 2000L);
+        assertTrue(chrono.getDuration() < 2050L);
         data.forEach(m -> LOGGER.info("number : {}", m));
         assertListEquals(data, "1", "3");
     }
+    
+    
 
     // =========================================================================
     // TOOLS
