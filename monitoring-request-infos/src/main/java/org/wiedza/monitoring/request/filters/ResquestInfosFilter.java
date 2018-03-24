@@ -54,9 +54,7 @@ public class ResquestInfosFilter implements Filter {
             } else {
                 Loggers.AUDITOUTLINE.error("chrono : {}ms", RequestInfosContext.currentInstance().getChrono().getDuration());
             }
-
         }
-
     }
 
     // =========================================================================
