@@ -40,6 +40,7 @@ public class RunAndCloseServiceTest {
     // =========================================================================
     @Test
     public void testWithoutTimeout() {
+        LOGGER.info("========== testWithoutTimeout ==========");
         //@formatter:off
         Chrono chrono = Chrono.startChrono();
         List<String> data = new RunAndCloseService<>("test",
@@ -60,6 +61,7 @@ public class RunAndCloseServiceTest {
 
     @Test
     public void testWithTimeout() {
+        LOGGER.info("========== testWithTimeout ==========");
         //@formatter:off
         Chrono chrono = Chrono.startChrono();
         List<String> data = new RunAndCloseService<>("test",
@@ -76,16 +78,16 @@ public class RunAndCloseServiceTest {
         assertTrue(chrono.getDuration() >= 2000L);
         assertTrue(chrono.getDuration() < 2050L);
         data.forEach(m -> LOGGER.info("number : {}", m));
-        assertListEquals(data, "1", "3");
+        assertListEquals(data, "1", "3", "timeout - 4", "timeout - 2");
     }
 
     @Test
     public void testWithTimeoutAndErrorHandler() {
-
+        LOGGER.info("========== testWithTimeoutAndErrorHandler ==========");
         BiFunction<Exception, Callable<String>, String> onError = (error, task) -> {
             String result = "null";
-            if (task instanceof CallableTimeoutResult) {
-                result = ((CallableTimeoutResult<String>) task).getTimeoutResult();
+            if (task instanceof CallableWithErrorResult) {
+                result = ((CallableWithErrorResult<String>) task).getTimeoutResult();
             }
             return result;
         };
@@ -103,10 +105,31 @@ public class RunAndCloseServiceTest {
         //@formatter:on
         chrono.stop();
         LOGGER.info("duration : {}", chrono.getDuration());
-        assertTrue(chrono.getDuration() > 2000L);
+        assertTrue(chrono.getDuration() >= 2000L);
         assertTrue(chrono.getDuration() < 2050L);
         data.forEach(m -> LOGGER.info("number : {}", m));
         assertListEquals(data, "1", "3", "timeout - 2", "timeout - 4");
+    }
+
+    @Test
+    public void testWithSubTask() {
+        LOGGER.info("========== testWithSubTask ==========");
+        //@formatter:off
+        Chrono chrono = Chrono.startChrono();
+        List<String> data = new RunAndCloseService<>("test",
+                                                      2000L,
+                                                      2, 
+                                                      new ComplexTask("1"),
+                                                      new ComplexTask("2")
+                                                     ).run();
+        //@formatter:on
+        chrono.stop();
+        LOGGER.info("duration : {}", chrono.getDuration());
+        data.forEach(m -> LOGGER.info("number : {}", m));
+        //@formatter:off
+        assertListEquals(data, "1.2 | 1.1 | 1.4 | 1.3",
+                                "2.1 | 2.2 | 2.4 | timeout - 2.3");
+        //@formatter:on
     }
 
     // =========================================================================

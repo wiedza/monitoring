@@ -8,7 +8,6 @@ package org.wiedza.monitoring.api.services.threads;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,7 +88,7 @@ public class RunAndCloseService<T> implements ThreadFactory {
         int howManyThreads = tasks.size() < nbThreads ? tasks.size() : nbThreads;
         this.threadsName = threadsName;
         this.timeout = timeout;
-        this.onError = onError == null ? this::handlerError : onError;
+        this.onError = onError;
         tasksAndFutures = new HashMap<>();
         threadGroup = Thread.currentThread().getThreadGroup();
         executor = Executors.newFixedThreadPool(howManyThreads, this);
@@ -163,21 +162,40 @@ public class RunAndCloseService<T> implements ThreadFactory {
     // =========================================================================
     // ERRORS
     // =========================================================================
-    private T handlerError(Exception error, Callable<T> task) {
-        Loggers.DEBUGLOG.error(error.getMessage(), error);
-        return null;
-    }
-
     private List<T> handlerTimeoutTask() {
         List<T> result = new ArrayList<>();
         for (Map.Entry<Future<T>, Callable<T>> entry : tasksAndFutures.entrySet()) {
             if (!entry.getKey().isDone()) {
-                T taskData = onError.apply(new TimeoutException(), entry.getValue());
+                final Callable<T> task = entry.getValue();
+                T taskData = processHandlerError(null, task);
                 if (taskData != null) {
                     result.add(taskData);
                 }
             }
         }
+        return result;
+    }
+
+    private T processHandlerError(Exception error, Callable<T> task) {
+        T result = null;
+        if (onError == null) {
+            result = handlerError(error, task);
+        } else {
+            result = onError.apply(error, task);
+        }
+        return result;
+    }
+
+    private T handlerError(Exception error, Callable<T> task) {
+        T result = null;
+        if (task instanceof CallableWithErrorResult) {
+            if (error == null) {
+                result = ((CallableWithErrorResult<T>) task).getTimeoutResult();
+            } else {
+                result = ((CallableWithErrorResult<T>) task).getErrorResult(error);
+            }
+        }
+
         return result;
     }
 

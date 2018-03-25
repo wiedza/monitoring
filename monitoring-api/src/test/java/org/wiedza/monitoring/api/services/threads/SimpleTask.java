@@ -12,22 +12,29 @@ package org.wiedza.monitoring.api.services.threads;
  * @author patrickguillerm
  * @since 24 mars 2018
  */
-public class SimpleTask implements CallableTimeoutResult<String> {
+public class SimpleTask implements CallableWithErrorResult<String> {
 
     // =========================================================================
     // ATTRIBUTES
     // =========================================================================
-    private final int    sleepTime;
+    private final int     sleepTime;
 
-    private final String result;
+    private final String  result;
+
+    private final boolean error;
 
     // =========================================================================
     // CONSTRUCTORS
     // =========================================================================
     public SimpleTask(int sleepTime, String result) {
-        super();
+        this(sleepTime, result, false);
+
+    }
+
+    public SimpleTask(int sleepTime, String result, boolean error) {
         this.sleepTime = sleepTime;
         this.result = result;
+        this.error = error;
     }
 
     // =========================================================================
@@ -36,6 +43,9 @@ public class SimpleTask implements CallableTimeoutResult<String> {
     @Override
     public String call() throws Exception {
         Thread.sleep(sleepTime);
+        if (error) {
+            throw new Exception("Error occurs!");
+        }
         return result;
     }
 
@@ -43,4 +53,7 @@ public class SimpleTask implements CallableTimeoutResult<String> {
         return "timeout - " + result;
     }
 
+    public String getErrorResult(Exception error) {
+        return "error - " + result;
+    }
 }
