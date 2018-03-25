@@ -52,7 +52,7 @@ public class ComplexTask implements CallableWithErrorResult<String> {
             result.add(new SimpleTask(500, "1.1"));
             result.add(new SimpleTask(400, "1.2"));
             result.add(new SimpleTask(1000, "1.3"));
-            result.add(new SimpleTask(500, "1.4", false));
+            result.add(new SimpleTask(500, "1.4", true));
         } else {
             result.add(new SimpleTask(100, value + ".1"));
             result.add(new SimpleTask(500, value + ".2"));

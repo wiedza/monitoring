@@ -20,12 +20,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.wiedza.monitoring.api.exceptions.Asserts;
-import org.wiedza.monitoring.api.loggers.Loggers;
 import org.wiedza.monitoring.api.time.Chrono;
 
 /**
@@ -39,6 +39,8 @@ public class RunAndCloseService<T> implements ThreadFactory {
     // =========================================================================
     // ATTRIBUTES
     // =========================================================================
+    private static final Logger                         LOGGER      = LoggerFactory.getLogger(RunAndCloseService.class);
+
     private final String                                threadsName;
 
     private final List<Callable<T>>                     tasks;
@@ -115,8 +117,6 @@ public class RunAndCloseService<T> implements ThreadFactory {
                     tasksLeft = tasksLeft - 1;
                 }
             } catch (ExecutionException | InterruptedException error) {
-                Callable<T> task = resolveTask(itemFuture);
-                taskData = handlerError(error, task);
                 tasksLeft = tasksLeft - 1;
             }
 
@@ -141,15 +141,40 @@ public class RunAndCloseService<T> implements ThreadFactory {
     private List<Future<T>> sumitTask() {
         final List<Future<T>> result = new ArrayList<>();
         for (Callable<T> task : tasks) {
-            final Future<T> future = completion.submit(task);
+            final Future<T> future = completion.submit(new CallableTask(task, this));
             result.add(future);
             tasksAndFutures.put(future, task);
         }
         return result;
     }
 
+    private class CallableTask<U> implements Callable<U> {
+        private final Callable<U>           task;
+
+        private final RunAndCloseService<U> runAndCloseService;
+
+        public CallableTask(Callable<U> task, RunAndCloseService<U> runAndCloseService) {
+            this.task = task;
+            this.runAndCloseService = runAndCloseService;
+        }
+
+        @Override
+        public U call() throws Exception {
+            U result = null;
+            try {
+                result = task.call();
+            } catch (Exception e) {
+                LOGGER.error(e.getMessage(), e);
+                result = runAndCloseService.processHandlerError(e, task);
+            }
+
+            return result;
+        }
+
+    }
+
     // =========================================================================
-    // OVERRIDES
+    // new Thread
     // =========================================================================
     @Override
     public Thread newThread(Runnable runnable) {
@@ -176,7 +201,7 @@ public class RunAndCloseService<T> implements ThreadFactory {
         return result;
     }
 
-    private T processHandlerError(Exception error, Callable<T> task) {
+    private synchronized T processHandlerError(Exception error, Callable<T> task) {
         T result = null;
         if (onError == null) {
             result = handlerError(error, task);
@@ -197,11 +222,6 @@ public class RunAndCloseService<T> implements ThreadFactory {
         }
 
         return result;
-    }
-
-    private Callable<T> resolveTask(Future<T> itemFuture) {
-        // TODO Auto-generated method stub
-        return null;
     }
 
 }
