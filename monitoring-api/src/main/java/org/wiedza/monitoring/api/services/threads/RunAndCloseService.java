@@ -94,7 +94,7 @@ public class RunAndCloseService<T> implements ThreadFactory {
         tasksAndFutures = new HashMap<>();
         threadGroup = Thread.currentThread().getThreadGroup();
         executor = Executors.newFixedThreadPool(howManyThreads, this);
-        completion = new ExecutorCompletionService<T>(executor);
+        completion = new ExecutorCompletionService<>(executor);
     }
 
     // =========================================================================
