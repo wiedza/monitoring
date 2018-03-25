@@ -14,6 +14,12 @@ import java.util.concurrent.Callable;
  * @author patrickguillerm
  * @since 24 mars 2018
  */
-public interface CallableTimeoutResult<V> extends Callable<V> {
-    V getTimeoutResult();
+public interface CallableWithErrorResult<V> extends Callable<V> {
+    default V getTimeoutResult() {
+        return null;
+    }
+
+    default V getErrorResult(Exception error) {
+        return null;
+    }
 }

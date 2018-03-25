@@ -31,15 +31,13 @@ public class RunAndCloseServiceTest {
     // ATTRIBUTES
     // =========================================================================
     private static final Logger LOGGER = LoggerFactory.getLogger(RunAndCloseServiceTest.class.getSimpleName());
-    // =========================================================================
-    // CONSTRUCTORS
-    // =========================================================================
 
     // =========================================================================
     // METHODS
     // =========================================================================
     @Test
     public void testWithoutTimeout() {
+        LOGGER.info("========== testWithoutTimeout ==========");
         //@formatter:off
         Chrono chrono = Chrono.startChrono();
         List<String> data = new RunAndCloseService<>("test",
@@ -60,6 +58,7 @@ public class RunAndCloseServiceTest {
 
     @Test
     public void testWithTimeout() {
+        LOGGER.info("========== testWithTimeout ==========");
         //@formatter:off
         Chrono chrono = Chrono.startChrono();
         List<String> data = new RunAndCloseService<>("test",
@@ -68,7 +67,7 @@ public class RunAndCloseServiceTest {
                                                       new SimpleTask(500,"1"),
                                                       new SimpleTask(10000,"2"),
                                                       new SimpleTask(1000,"3"),
-                                                      new SimpleTask(700,"4")
+                                                      new SimpleTask(600,"4")
                                                      ).run();
         //@formatter:on
         chrono.stop();
@@ -76,16 +75,23 @@ public class RunAndCloseServiceTest {
         assertTrue(chrono.getDuration() >= 2000L);
         assertTrue(chrono.getDuration() < 2050L);
         data.forEach(m -> LOGGER.info("number : {}", m));
-        assertListEquals(data, "1", "3");
+
+        assertEquals("1", data.get(0));
+        assertEquals("3", data.get(1));
+        if ("timeout - 2".equals(data.get(2))) {
+            assertEquals("timeout - 4", data.get(3));
+        } else {
+            assertEquals("timeout - 2", data.get(3));
+        }
     }
 
     @Test
     public void testWithTimeoutAndErrorHandler() {
-
+        LOGGER.info("========== testWithTimeoutAndErrorHandler ==========");
         BiFunction<Exception, Callable<String>, String> onError = (error, task) -> {
             String result = "null";
-            if (task instanceof CallableTimeoutResult) {
-                result = ((CallableTimeoutResult<String>) task).getTimeoutResult();
+            if (task instanceof CallableWithErrorResult) {
+                result = ((CallableWithErrorResult<String>) task).getTimeoutResult();
             }
             return result;
         };
@@ -103,10 +109,37 @@ public class RunAndCloseServiceTest {
         //@formatter:on
         chrono.stop();
         LOGGER.info("duration : {}", chrono.getDuration());
-        assertTrue(chrono.getDuration() > 2000L);
+        assertTrue(chrono.getDuration() >= 2000L);
         assertTrue(chrono.getDuration() < 2050L);
         data.forEach(m -> LOGGER.info("number : {}", m));
-        assertListEquals(data, "1", "3", "timeout - 2", "timeout - 4");
+        assertEquals("1", data.get(0));
+        assertEquals("3", data.get(1));
+        if ("timeout - 2".equals(data.get(2))) {
+            assertEquals("timeout - 4", data.get(3));
+        } else {
+            assertEquals("timeout - 2", data.get(3));
+        }
+    }
+
+    @Test
+    public void testWithSubTask() {
+        LOGGER.info("========== testWithSubTask ==========");
+        //@formatter:off
+        Chrono chrono = Chrono.startChrono();
+        List<String> data = new RunAndCloseService<>("test",
+                                                      2000L,
+                                                      2, 
+                                                      new ComplexTask("1"),
+                                                      new ComplexTask("2")
+                                                     ).run();
+        //@formatter:on
+        chrono.stop();
+        LOGGER.info("duration : {}", chrono.getDuration());
+        data.forEach(m -> LOGGER.info("number : {}", m));
+        //@formatter:off
+        assertListEquals(data, "1.2 | 1.1 | error - 1.4 | 1.3",
+                                "2.1 | 2.2 | 2.4 | timeout - 2.3");
+        //@formatter:on
     }
 
     // =========================================================================
@@ -116,7 +149,7 @@ public class RunAndCloseServiceTest {
         assertNotNull(data);
         assertEquals(data.size(), ref.length);
         for (int i = 0; i < ref.length; i++) {
-            assertEquals(data.get(i), ref[i]);
+            assertEquals(ref[i], data.get(i));
         }
     }
 
